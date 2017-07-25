@@ -738,6 +738,7 @@ contains a reference, retrieve the type of the reference."
         (substitution-group (xml-get-attribute-or-nil node 'substitutionGroup))
         (node-name (soap-l2wk (xml-node-name node))))
     (cl-assert (memq node-name '(xsd:element xsd:group))
+               nil
                "expecting xsd:element or xsd:group, got %s" node-name)
 
     (when type
@@ -934,6 +935,7 @@ This is a specialization of `soap-decode-type' for
 (defun soap-xs-parse-attribute (node)
   "Construct a `soap-xs-attribute' from NODE."
   (cl-assert (eq (soap-l2wk (xml-node-name node)) 'xsd:attribute)
+             nil
              "expecting xsd:attribute, got %s" (soap-l2wk (xml-node-name node)))
   (let* ((name (xml-get-attribute-or-nil node 'name))
          (type (soap-l2fq (xml-get-attribute-or-nil node 'type)))
@@ -951,6 +953,7 @@ This is a specialization of `soap-decode-type' for
   "Construct a `soap-xs-attribute-group' from NODE."
   (let ((node-name (soap-l2wk (xml-node-name node))))
     (cl-assert (eq node-name 'xsd:attributeGroup)
+               nil
                "expecting xsd:attributeGroup, got %s" node-name)
     (let ((name (xml-get-attribute-or-nil node 'name))
           (id (xml-get-attribute-or-nil node 'id))
