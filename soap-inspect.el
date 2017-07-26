@@ -480,8 +480,10 @@ TYPE is a `soap-xs-complex-type'"
           (insert (make-string (- op-name-width (length op)) ?\s))
           (insert " (")
           (insert soap-action)
+          (when (and use (not (equal soap-action "")))
+            (insert " "))
           (when use
-            (insert " " (symbol-name use)))
+            (insert (symbol-name use)))
           (insert ")"))
         (insert "\n")))))
 
