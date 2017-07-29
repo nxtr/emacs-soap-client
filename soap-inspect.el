@@ -42,19 +42,22 @@
 
 ;;; sample-value
 
-(defun soap-sample-value (type)
+(defun soap-sample-value (type &optional count)
   "Provide a sample value for TYPE, a WSDL type.
 A sample value is a LISP value which soap-client.el will accept
 for encoding it using TYPE when making SOAP requests.
 
 This is a generic function, depending on TYPE a specific function
-will be called."
+will be called.
+
+The COUNT argument is passed by specific calling functions for recursive
+types to limit provided values."
   (let ((sample-value (get (aref type 0) 'soap-sample-value)))
     (if sample-value
-        (funcall sample-value type)
+        (funcall sample-value type count)
       (error "Cannot provide sample value for type %s" (aref type 0)))))
 
-(defun soap-sample-value-for-xs-basic-type (type)
+(defun soap-sample-value-for-xs-basic-type (type &rest _)
   "Provide a sample value for TYPE, an xs-basic-type.
 This is a specialization of `soap-sample-value' for xs-basic-type
 objects."
@@ -69,16 +72,16 @@ objects."
     (base64Binary "a string")
     (t (format "%s" (soap-xs-basic-type-kind type)))))
 
-(defun soap-sample-value-for-xs-element (element)
+(defun soap-sample-value-for-xs-element (element &optional count)
   "Provide a sample value for ELEMENT, a WSDL element.
 This is a specialization of `soap-sample-value' for xs-element
 objects."
   (if (soap-xs-element-name element)
       (cons (intern (soap-xs-element-name element))
-            (soap-sample-value (soap-xs-element-type element)))
-    (soap-sample-value (soap-xs-element-type element))))
+            (soap-sample-value (soap-xs-element-type element) count))
+    (soap-sample-value (soap-xs-element-type element) count)))
 
-(defun soap-sample-value-for-xs-attribute (attribute)
+(defun soap-sample-value-for-xs-attribute (attribute &rest _)
   "Provide a sample value for ATTRIBUTE, a WSDL attribute.
 This is a specialization of `soap-sample-value' for
 soap-xs-attribute objects."
@@ -87,7 +90,7 @@ soap-xs-attribute objects."
             (soap-sample-value (soap-xs-attribute-type attribute)))
     (soap-sample-value (soap-xs-attribute-type attribute))))
 
-(defun soap-sample-value-for-xs-attribute-group (attribute-group)
+(defun soap-sample-value-for-xs-attribute-group (attribute-group &rest _)
   "Provide a sample value for ATTRIBUTE-GROUP, a WSDL attribute group.
 This is a specialization of `soap-sample-value' for
 soap-xs-attribute objects."
@@ -104,7 +107,7 @@ soap-xs-attribute objects."
                       (soap-sample-value
                        (soap-xs-attribute-type attribute))))))))
 
-(defun soap-sample-value-for-xs-simple-type (type)
+(defun soap-sample-value-for-xs-simple-type (type &rest _)
   "Provide a sample value for TYPE, a `soap-xs-simple-type'.
 This is a specialization of `soap-sample-value' for
 `soap-xs-simple-type' objects."
@@ -138,31 +141,35 @@ This is a specialization of `soap-sample-value' for
     ((soap-xs-basic-type-p (soap-xs-simple-type-base type))
      (soap-sample-value (soap-xs-simple-type-base type))))))
 
-(defun soap-sample-value-for-xs-complex-type (type)
+(defun soap-sample-value-for-xs-complex-type (type &optional count)
   "Provide a sample value for TYPE, a `soap-xs-complex-type'.
 This is a specialization of `soap-sample-value' for
 `soap-xs-complex-type' objects."
-  (append
-   (mapcar 'soap-sample-value-for-xs-attribute
-           (soap-xs-type-attributes type))
-   (cl-case (soap-xs-complex-type-indicator type)
-     (array
-      (let* ((element-type (soap-xs-complex-type-base type))
-             (sample1 (soap-sample-value element-type))
-             (sample2 (soap-sample-value element-type)))
-        ;; Our sample value is a vector of two elements, but any number of
-        ;; elements are permissible
-        (vector sample1 sample2 '&etc)))
-     ((sequence choice all)
-      (let ((base (soap-xs-complex-type-base type)))
-        (let ((value (append (and base (soap-sample-value base))
-                             (mapcar #'soap-sample-value
-                                     (soap-xs-complex-type-elements type)))))
-          (if (eq (soap-xs-complex-type-indicator type) 'choice)
-              (cons '***choice-of*** value)
-            value)))))))
+  (unless (>= (alist-get type count 0) 2)
+    (cl-incf (alist-get type count 0))
+    (append
+     (mapcar 'soap-sample-value-for-xs-attribute
+             (soap-xs-type-attributes type))
+     (cl-case (soap-xs-complex-type-indicator type)
+       (array
+        (let* ((element-type (soap-xs-complex-type-base type))
+               (sample1 (soap-sample-value element-type))
+               (sample2 (soap-sample-value element-type)))
+          ;; Our sample value is a vector of two elements, but any number of
+          ;; elements are permissible
+          (vector sample1 sample2 '&etc)))
+       ((sequence choice all)
+        (let ((base (soap-xs-complex-type-base type)))
+          (let ((value (append
+                        (and base (soap-sample-value base))
+                        (mapcar (lambda (e)
+                                  (funcall #'soap-sample-value e count))
+                                (soap-xs-complex-type-elements type)))))
+            (if (eq (soap-xs-complex-type-indicator type) 'choice)
+                (cons '***choice-of*** value)
+              value))))))))
 
-(defun soap-sample-value-for-message (message)
+(defun soap-sample-value-for-message (message &rest _)
   "Provide a sample value for a WSDL MESSAGE.
 This is a specialization of `soap-sample-value' for
 `soap-message' objects."
