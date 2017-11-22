@@ -335,7 +335,7 @@ ATTRIBUTE is a soap-xs-attribute-group."
     (insert "\nEnumeration values: ")
     (dolist (e (soap-xs-simple-type-enumeration type))
       (insert "\n\t")
-      (pp e)))
+      (pp e (current-buffer))))
   (when (soap-xs-simple-type-pattern type)
     (insert "\nPattern: " (soap-xs-simple-type-pattern type)))
   (when (car (soap-xs-simple-type-length-range type))
