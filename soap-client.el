@@ -110,7 +110,8 @@ dynamically bound variable, controlled by
 `soap-with-local-xmlns'")
 
 (defvar soap-current-wsdl nil
-  "The current WSDL document used when decoding the SOAP response.
+  "The current WSDL document used when encoding the SOAP request
+and decoding the SOAP response.
 This is a dynamically bound variable.")
 
 (defun soap-wk2l (well-known-name)
@@ -2968,7 +2969,8 @@ WSDL is the wsdl document used to encode the PARAMETERS.
 SERVICE-URL should be provided when WS-Addressing is being used."
   (with-temp-buffer
     (let ((soap-encoded-namespaces '("xsi" "soap" "soapenc"))
-          (use (soap-bound-operation-use operation)))
+          (use (soap-bound-operation-use operation))
+          (soap-current-wsdl wsdl))
 
       ;; Create the request body
       (soap-encode-body operation parameters service-url)
