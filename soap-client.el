@@ -231,7 +231,7 @@ A valid name is either a string or a cons of (NAMESPACE . NAME)."
              ;; the target namespace.
              (unless (equal target-ns (cdr tns))
                (soap-warning
-                "soap-extract-xmlns(%s): tns alias and targetNamespace mismatch"
+                "Soap-extract-xmlns(%s): tns alias and targetNamespace mismatch"
                 (xml-node-name node))))
             ((and tns (not target-ns))
              (setq target-ns (cdr tns)))))
@@ -761,7 +761,7 @@ contains a reference, retrieve the type of the reference."
             (if complex-type
                 (setq type (soap-xs-parse-complex-type (car complex-type)))
               ;; else
-              (error "Soap-xs-parse-element: missing type or ref"))))))
+              (error "Soap-xs-parse-element(%s): missing type or ref" name))))))
 
     (make-soap-xs-element :name name
                           ;; Use the full namespace name for now, we will
@@ -1292,7 +1292,7 @@ See also `soap-wsdl-resolve-references'."
                   (fail-with-message "big value, should be at most %s"
                                      (cdr integer-range))))))))
       (when messages
-        (error "Xs-simple-type(%s, %s): %s"
+        (error "Soap-validate-xs-simple-type(%s, %s): %s"
                value (or (soap-xs-type-name type) (soap-xs-type-id type))
                (car messages)))))
   ;; Return the validated value.
