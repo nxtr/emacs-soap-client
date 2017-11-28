@@ -2102,6 +2102,15 @@ used to resolve the namespace alias."
 
 ;;;;; soap-parse-schema
 
+(defvar soap-non-strict-schema-parsing nil
+  "When t, parsing will continue after signaled errors.
+This is a dynamically bound variable.")
+
+(defvar soap-demoted-errors t
+  "When t, if `soap-non-strict-schema-parsing' is non-nil any error signaling
+are coverted into warning messages.
+This is a dynamically bound variable.")
+
 (defun soap-parse-schema (node wsdl)
   "Parse a schema NODE, placing the results in WSDL.
 Return a SOAP-NAMESPACE containing the elements."
@@ -2115,25 +2124,34 @@ Return a SOAP-NAMESPACE containing the elements."
 
       (dolist (def (xml-node-children node))
         (unless (stringp def)           ; skip text nodes
-          (cl-case (soap-l2wk (xml-node-name def))
-            (xsd:import
-             ;; Imports will be processed later
-             ;; NOTE: we should expand the location now!
-             (let ((location (or
-                              (xml-get-attribute-or-nil def 'schemaLocation)
-                              (xml-get-attribute-or-nil def 'location))))
-               (when location
-                 (push location (soap-wsdl-xmlschema-imports wsdl)))))
-            (xsd:element
-             (soap-namespace-put (soap-xs-parse-element def) ns))
-            (xsd:attribute
-             (soap-namespace-put (soap-xs-parse-attribute def) ns))
-            (xsd:attributeGroup
-             (soap-namespace-put (soap-xs-parse-attribute-group def) ns))
-            (xsd:simpleType
-             (soap-namespace-put (soap-xs-parse-simple-type def) ns))
-            ((xsd:complexType xsd:group)
-             (soap-namespace-put (soap-xs-parse-complex-type def) ns)))))
+          (condition-case err
+              (cl-case (soap-l2wk (xml-node-name def))
+                (xsd:import
+                 ;; Imports will be processed later
+                 ;; NOTE: we should expand the location now!
+                 (let ((location (or
+                                  (xml-get-attribute-or-nil def 'schemaLocation)
+                                  (xml-get-attribute-or-nil def 'location))))
+                   (when location
+                     (push location (soap-wsdl-xmlschema-imports wsdl)))))
+                (xsd:element
+                 (soap-namespace-put (soap-xs-parse-element def) ns))
+                (xsd:attribute
+                 (soap-namespace-put (soap-xs-parse-attribute def) ns))
+                (xsd:attributeGroup
+                 (soap-namespace-put (soap-xs-parse-attribute-group def) ns))
+                (xsd:simpleType
+                 (soap-namespace-put (soap-xs-parse-simple-type def) ns))
+                ((xsd:complexType xsd:group)
+                 (soap-namespace-put (soap-xs-parse-complex-type def) ns)))
+            (error (if soap-non-strict-schema-parsing
+                       (when soap-demoted-errors
+                         (lwarn 'sf-mode :warning
+                                "Soap-parse-schema(%s, %s): Discarding, %s"
+                                (xml-node-name def)
+                                (soap-wsdl-current-file wsdl)
+                                (error-message-string err)))
+                     (signal (car err) (cdr err)))))))
       ns)))
 
 ;;;;; Resolving references for wsdl types
