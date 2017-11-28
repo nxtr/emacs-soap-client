@@ -1625,6 +1625,30 @@ alternatives."
       (append (list element)
               (soap-xs-element-alternatives element)))))
 
+(defun soap-refine-xs-element-type (value element)
+  "Return an copy of ELEMENT with a type refined by the :type property
+value in VALUE list."
+  (unless (soap-xs-complex-type-p element)
+    (let ((type (soap-xs-element-type element)))
+      (when (soap-xs-complex-type-p type)
+        (let ((refinement (cadr (memq :type value))))
+          (unless (booleanp refinement)
+            (when (symbolp refinement)
+              (let ((refinement-name (symbol-name refinement)))
+                (unless (equal (soap-xs-type-name type) refinement)
+                  (let ((refinement-type (soap-wsdl-get
+                                          (concat
+                                           (soap-element-namespace-tag type)
+                                           ":" refinement-name)
+                                          soap-current-wsdl
+                                          'soap-xs-complex-type-p)))
+                    (when (soap-xs-complex-type-base refinement-type)
+                      (let ((element-copy (copy-soap-xs-element element)))
+                        (setf (soap-xs-element-type^ element-copy)
+                              refinement-type)
+                        (setq element element-copy))))))))))))
+  element)
+
 (defun soap-encode-xs-complex-type (value type)
   "Encode the VALUE according to TYPE.
 The data is inserted in the current buffer at the current
@@ -1656,7 +1680,9 @@ This is a specialization of `soap-encode-value' for
                            (when (and (consp v)
                                       (equal (car v) e-name))
                              (cl-incf instance-count)
-                             (soap-encode-value (cdr v) candidate))))
+                             (soap-encode-value (cdr v)
+                                                (soap-refine-xs-element-type
+                                                 (cdr v) candidate)))))
                      (if (soap-xs-complex-type-indicator type)
                          (let ((current-point (point)))
                            ;; Check if encoding happened by checking if
