@@ -1809,11 +1809,13 @@ This is a specialization of `soap-decode-type' for
            (push (soap-decode-type element-type node) result)))
        (nreverse result)))
     ((sequence choice all nil)
-     (let ((result nil)
-           (base (soap-xs-complex-type-base type))
-           ;; Heuristic: guess if we need to decode using local
-           ;; namespaces.
-           (use-fq-names (string-match ":" (symbol-name (car node)))))
+     (let* ((result nil)
+            (base (soap-xs-complex-type-base type))
+            (xsi-type (soap-xml-get-attribute-or-nil1 node 'xsi:type))
+            ;; Heuristic: guess if we need to decode using local
+            ;; namespaces.
+            (use-fq-names (or (string-match ":" (symbol-name (car node)))
+                              (when xsi-type (string-match ":" xsi-type)))))
        (when base
          (setq result (nreverse (soap-decode-type base node))))
        (catch 'done
