@@ -1810,16 +1810,16 @@ This is a specialization of `soap-decode-type' for
        (nreverse result)))
     ((sequence choice all nil)
      (let ((result nil)
-           (base (soap-xs-complex-type-base type)))
+           (base (soap-xs-complex-type-base type))
+           ;; Heuristic: guess if we need to decode using local
+           ;; namespaces.
+           (use-fq-names (string-match ":" (symbol-name (car node)))))
        (when base
          (setq result (nreverse (soap-decode-type base node))))
        (catch 'done
          (dolist (element (soap-xs-complex-type-elements type))
            (let* ((instance-count 0)
                   (e-name (soap-xs-element-name element))
-                  ;; Heuristic: guess if we need to decode using local
-                  ;; namespaces.
-                  (use-fq-names (string-match ":" (symbol-name (car node))))
                   (children (if e-name
                                 (if use-fq-names
                                     ;; Find relevant children
