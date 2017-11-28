@@ -879,6 +879,9 @@ This is a specialization of `soap-encode-value' for
         (when (soap-should-encode-value-for-xs-element value element)
           (progn
             (insert "<" fq-name)
+            ;; Add xsi:type if a :type property value is present in value list
+            (when (and (listp value) (cadr (memq :type value)))
+              (insert " xsi:type=\"" (soap-element-fq-name type) "\""))
             (soap-encode-attributes value type)
             ;; If value is nil and type is boolean encode the value as "false".
             ;; Otherwise don't encode the value.
@@ -1600,7 +1603,8 @@ This is a specialization of `soap-encode-attributes' for
               (insert " " element-name
                       "=\"" (soap-xs-attribute-default a) "\"")
             (dolist (value-pair value)
-              (when (equal element-name (symbol-name (car value-pair)))
+              (when (and (consp value-pair)
+                         (equal element-name (symbol-name (car value-pair))))
                 (insert " " element-name
                         "=\"" (cdr value-pair) "\""))))))
       ;; If this is not an empty type, and we have no value, mark it as nil
@@ -1649,7 +1653,8 @@ This is a specialization of `soap-encode-value' for
                    (if e-name
                        (let ((e-name (intern e-name)))
                          (dolist (v value)
-                           (when (equal (car v) e-name)
+                           (when (and (consp v)
+                                      (equal (car v) e-name))
                              (cl-incf instance-count)
                              (soap-encode-value (cdr v) candidate))))
                      (if (soap-xs-complex-type-indicator type)
